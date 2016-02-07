@@ -1,28 +1,46 @@
+---
 format_version: 1.1.0
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
-
 app:
   envs:
-  # define these in your .bitrise.secrets.yml
-  - BITRISE_PROJECT_PATH:
-  - BITRISE_SCHEME:
-
+  - BITRISE_PROJECT_PATH: ios/ReactNativeSample.xcodeproj
+    opts:
+      is_expand: false
+  - BITRISE_SCHEME: ReactNativeSample
+    opts:
+      is_expand: false
+trigger_map:
+- pattern: "*"
+  is_pull_request_allowed: true
+  workflow: build-react-app
 workflows:
-  test:
+  build-react-app:
     steps:
     - script:
+        title: Install React Native CLI
+        inputs:
+        - content: npm install -g react-native-cli
+    - script:
+        title: npm install
+        inputs:
+        - content: npm install
+    - script:
+        title: Bundle app
         deps:
           brew:
           - name: watchman
           - name: flow
-        title:
         inputs:
-        - content: react-native bundle --entry-file ./index.ios.js --platform ios --bundle-output ios/main.jsbundle
-    - git::https://github.com/bitrise-io/steps-xcode-archive.git@1.6.0:
-        title: Xcode Archive
+        - content: react-native bundle --entry-file ./index.ios.js --platform ios
+            --bundle-output ios/main.jsbundle
+    - xcode-archive:
+        title: 'Xcode: Create Archive'
         inputs:
-          - is_force_code_sign: "no"
-          - is_clean_build: "yes"
-          - workdir: ./
-          - output_tool: xcpretty
-          - configuration: Debug
+        - output_dir: "${BITRISE_DEPLOY_DIR}"
+        outputs:
+        - BITRISE_IPA_PATH:
+          opts:
+            title: The created .ipa file's path
+        - BITRISE_DSYM_PATH:
+          opts:
+            title: The created .dSYM.zip file's path
